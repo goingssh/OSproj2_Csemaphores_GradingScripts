@@ -1,0 +1,48 @@
+@Sherri Goings
+12/16/2018
+
+Files & Code to run and perform batch tests on student submissions for H2SO4 project.
+
+Project:
+Project2 for CS332 Operating Systems - practice with C, many threads, semaphores.
+quick -  	 full project writeup in Project2.pdf
+
+H2SO4 requires the use of semaphores to coordinate many atoms each running on a separate thread in order to form H2SO4 molecules 1 at a time. A molecule should be formed as soon as there are 2H, 4O, and 1S atom available, and after it is formed the 7 atom threads used must all exit before another molecule may form. They must exit in the order H -> S -> O.  A specific output statement is printed every time an atom is created, exits, or a molecule is created. 
+
+Solution:
+Multithreaded C program with synchronization through semaphores.
+quickrun -	  gcc H2SO4Test.c H2SO4.c
+			  ./a.out 4 2 8
+			 
+To compile the project you will need the 3 C files H2SO4Test.c, H2SO4.h, and the project solution in H2SO4.c. Compile with "gcc H2SO4Test.c H2SO4.c". By default an executable will be produced named "a.out".  To run the program use "./a.out numH, numS, numO" where numH is how many Hydrogen atoms you want to produce, numS and numO the same for Sulfur and Oxygen. The program is not required to terminate if the initial number of atoms is not in the correct ratio of 2:1:4 so it is recommended to only use multiples of those numbers when testing, e.g. "./a.out 4 2 8".
+
+
+Testing - TestOutput.py:
+Python3 test program that expects H2SO4 output to be provided in stdin.
+quickrun -	   ./a.out 4 2 8 | python3 TestOutput.py
+
+The main testing code is in TestOutput.py.  This script will run the output of a single execution of the H2SO4 program through a suite of tests for common errors.  The first failed test will print an info message and the testing will terminate; for the specific order this output must be in, if 1 test fails it is likely many more will also and the extra information is more noise than useful. TestOutput.py gets the text to run tests on from stdin, so to run a single test on a single program, you can pipe the output of the H2SO4 program to the input of TestOutput.py: "./a.out 4 2 8 | python3 TestOutput.py
+
+
+failedTestExamples folder:
+Bash script to run sample output (*.test files) that fails each implemented test through TestOutput.py. Expects TestOutput.py to be in same directory as failed folder (not inside failed folder).
+quickrun - 	(all)  		   ./runFailExamples.sh
+		  	(one)  		    cat exitPreMol.test | python3 TestOutput.py
+
+After making changes to TestOutput.py, or just to see an example of the error messages for each test that can fail, you can use the bash script in the failed folder to run TestOutput.py on a .test file that contains example output from one run of H2SO4. Each test file's output triggers one of the tests which prints the corresponding error message.  The .test file names describe what test should fail on that output. To provide sample output from one of the files to the Python script, you can use "cat xxx.test | python3 TestOutput.py".  To run all files at once through the tests use the provided bash script runFailExamples.sh; navigate to inside the failed folder, and the command will just be "./runFailExamples.sh"
+
+
+exSolutions folder:
+2 solutions for H2SO4.c that each have different problem. 
+quickrun - 			gcc H2SO4Test.c H2SO4brokenExitOrder.c
+		 			./a.out 4 2 8 | python3 TestOutput.py
+
+To see an example of an incorrect solution to H2SO4 actually run, as opposed to just the bad output in the .test files, you can compile one of the 2 broken solutions in the exSolutions folder instead of the working H2SO4.c file in the top level directory. The brokenExitOrder solution has a consistent error every time it runs where atoms exit in the wrong order. You can perform a single test on this to see the output. The stochasticError solution has a slight gap in synchronization that allows multiple molecules to be formed concurrently. This is very rare, less than 1% of the time if atoms are started in random order, and only in 5-10% of "worst-case" order runs where multiple sulfurs are created before many other atoms. To see this you can use the many-test script described below in the Batch Testing section. By default that test will run with random atom creation order, so you still may not see the error.  There's an easter egg hack in the H2SO4Test.c file however that allows you to enter -1 instead of the actual number of Hydrogen atoms as a command line argument. The -1 tells the program to always put all sulfurs first when creating atoms. The number of H atoms created (as we stole its arg for the -1) will just be twice the num S arg, to keep the correct ratios.
+
+
+Batch Testing - TestMany.py:
+Python3 test program that runs the H2SO4 program many times and send the output of each through TestOutput.py. Expects TestOutput.py to be in the same directory as TestMany.py as well as the H2SO4 executable.
+quickrun - 	 		 gcc H2SO4Test.c H2SO4stochasticError.c
+		 			 python3 TestMany.py ./a.out -1 2 8
+
+Many of the errors caused by incorrect semaphore usage will be stochastic and often rare. Running just one test therefore will miss these types of errors. The file TestMany.py is a script to run a H2SO4 executable many times and run each ouput through TestOutput.py, then aggregate the data to output only the % of runs that failed any test and a confidence stat. To use this tester use the command e.g. "python3 TestMany.py ./a.out 4 2 8".  Or to test the stochasticError solution described above, use "python3 TestMany.py ./a.out -1 2 8" and you likely will get 5% to 25% failed tests. MAKE SURE you recompiled H2SO4Test.c with H2SO4stochasticError.c and are using the new executable (e.g. a.out).
